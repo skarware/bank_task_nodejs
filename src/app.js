@@ -1,5 +1,5 @@
 import Bank from './Bank.js';
-import Utils from "./Utils.js";
+import Utils from './Utils.js';
 
 const operationsArr = [ ////// FOR DEVELOPING PURPOSES ONLY
     { "date": "2016-01-05", "user_id": 1, "user_type": "natural", "type": "cash_in", "operation": { "amount": 200.00, "currency": "EUR" } },
@@ -14,9 +14,6 @@ const operationsArr = [ ////// FOR DEVELOPING PURPOSES ONLY
 ] ////// FOR DEVELOPING PURPOSES ONLY
 
 let bankVilniusBranch = new Bank('Vilniaus filialas');
-
-// const operation = JSON.parse(Utils.camelCase(JSON.stringify(operationsArr[0])), Utils.toDateObj); ////// FOR DEVELOPING PURPOSES ONLY
-// bank.processTransaction(operation); ////// FOR DEVELOPING PURPOSES ONLY
 
 for (let i = 0; operationsArr.length > i ; i++) { ////// FOR DEVELOPING PURPOSES ONLY
     bankVilniusBranch.processTransaction(JSON.parse(Utils.camelCase(JSON.stringify(operationsArr[i])), Utils.toDateObj)); ////// FOR DEVELOPING PURPOSES ONLY

@@ -1,47 +1,21 @@
+import commissionFees from './commissionFees.js';
+
+// on first load get commission Fees Configuration from API
+let commissionFeesConfig = commissionFees.getFeesConfig();
+
 export default class Bank {
 
-    // create separate module for commission fees configuration?
-    static commissionFeesConfigURLs = {
-        cashIn: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-in;",
-        cashOutNatural: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-out/natural",
-        cashOutJuridical: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-out/juridical"
-    };
-
-    static getFeesConfig = function getCommissionFeesConfigurationFromAPI() {
-
-        // invoke on object instantiation with constructor or static bock?
-
+    // update config function should be able to update all bank instances configs at oce or?
+    // In case commissionFeesConfig changes we can upate it
+    updateCommissionFeesConfig() {
+       commissionFeesConfig = commissionFees.updateFeesConfig(); // Ca tuo atveju jei butu singeltonas, bet ar tai singeltonas? kolkas ne
     }
-
-    static commissionFeesConfigs = {
-        cashIn: {
-            "percents": 0.03,
-            "max": {
-                "amount": 5,
-                "currency": "EUR"
-            }
-        },
-        cashOutNatural: {
-            "percents": 0.3,
-            "week_limit": {
-                "amount": 1000,
-                "currency": "EUR"
-            }
-        },
-        cashOutJuridical: {
-            "percents": 0.3,
-            "min": {
-                "amount": 0.5,
-                "currency": "EUR"
-            }
-        }
-    };
 
     // same log for all branches of the bank
     static transactionsLog = [];
 
-    constructor(name) {
-        this.name = name;
+    constructor(branchName) {
+        this.branchName = branchName;
     }
 
     processTransaction(transaction) {
@@ -81,11 +55,11 @@ export default class Bank {
 
     getFeeConfig({type, userType}) {
         // fee types 'cashIn','cashOutNatural','cashOutJuridical'
-        let feeConfig = Bank.commissionFeesConfigs.cashIn; // default
+        let feeConfig = commissionFeesConfig.cashIn; // default
         if (type === 'cashOut') {
-            feeConfig = Bank.commissionFeesConfigs.cashOutNatural
+            feeConfig = commissionFeesConfig.cashOutNatural
             if (userType === 'juridical') {
-                feeConfig = Bank.commissionFeesConfigs.cashOutJuridical;
+                feeConfig = commissionFeesConfig.cashOutJuridical;
             }
         }
         return feeConfig;
