@@ -1,18 +1,18 @@
 import commissionFees from './commissionFees.js';
 
-// on first load get commission Fees Configuration from API
-let commissionFeesConfig = commissionFees.getFeesConfig();
+// On first Bank class load get commission Fees Configuration from API
+const commissionFeesManager = commissionFees.getInstance();
+const commissionFeesConfig = commissionFeesManager.getFeesConfig;
+
+// Same log for all branches of the bank
+const transactionsLog = [];
 
 export default class Bank {
 
-    // update config function should be able to update all bank instances configs at oce or?
-    // In case commissionFeesConfig changes we can upate it
+    // In case commission fees configuration on API changes
     updateCommissionFeesConfig() {
-       commissionFeesConfig = commissionFees.updateFeesConfig(); // Ca tuo atveju jei butu singeltonas, bet ar tai singeltonas? kolkas ne
+        commissionFeesManager.updateFeesConfig();
     }
-
-    // same log for all branches of the bank
-    static transactionsLog = [];
 
     constructor(branchName) {
         this.branchName = branchName;
@@ -32,9 +32,8 @@ export default class Bank {
     }
 
     logTransaction(transaction) {
-        Bank.transactionsLog.push(transaction)
+        transactionsLog.push(transaction)
     }
-
 
     getCommissionFee(transaction) {
         // initial commissionFee
@@ -43,18 +42,16 @@ export default class Bank {
         // First get the right commission fee config for given transaction
         const feeConfig = this.getFeeConfig(transaction);
 
-
         return undefined;
     }
 
     calcCommissionFee(transaction) {
 
-
         return undefined;
     }
 
     getFeeConfig({type, userType}) {
-        // fee types 'cashIn','cashOutNatural','cashOutJuridical'
+        // Available fee types 'cashIn','cashOutNatural','cashOutJuridical'
         let feeConfig = commissionFeesConfig.cashIn; // default
         if (type === 'cashOut') {
             feeConfig = commissionFeesConfig.cashOutNatural
