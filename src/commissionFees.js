@@ -1,69 +1,71 @@
-export default (function commissionFees() {
+export default (function commissionFeesSingletonFactory() {
+    // export commissions fees module as singleton, not that the current app version need it but more like to show off or try singleton implementation using lazy initialization pattern in JS
+    function commissionFees() {
 
-    const commissionFeesConfigURLs = {
-        cashIn: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-in;",
-        cashOutNatural: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-out/natural",
-        cashOutJuridical: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-out/juridical"
-    };
+        // Object with all currently know commission fees configs
+        const configUrls = {
+            cashIn: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-in",
+            cashOutNatural: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-out/natural",
+            cashOutJuridical: "http://private-anon-e3a33b01c6-uzduotis.apiary-mock.com/config/cash-out/juridical"
+        };
 
-    const fetchFeesConfig = function fetchCommissionFeesConfigurationFromAPI(url) {
+        const fetchFeesConfig = function fetchCommissionFeesConfigurationFromAPI(url) {
 
-    }
+            // maybe should implement plural version, faster async version with Promise.all()
 
-    const makeFeesConfigObject = async function makeCommissionFeesConfigurationFromAPI(urlsObj) {
-        // Create new empty object
-        let feeConfigs = {};
-        // Populate new empty object with commission fees configs received from API with same names as found in urlsObj parameter
-        for (let [key, value] of Object.entries(commissionFeesConfigURLs)) {
-            console.log(`${key}: ${value}`);    ////// FOR DEVELOPING PURPOSES ONLY
-            // feeConfigs[key] = fetchFeesConfig(value);
+            // return = await Promise.all(feeConfigs);
+
         }
-        // Object.entries(commissionFeesConfigURLs).forEach(([key, value]) => feeConfigs[key] = fetchFeesConfig(value))
 
-        console.log(feeConfigs);    ////// FOR DEVELOPING PURPOSES ONLY
+        // Empty commissions fees config object which will be filled by getFeesConfigObject
+        const feesConfig = {}; // const so that referenced obj do not change and updateFeesConfig method would update existing object
 
-        // return = await Promise.all(feeConfigs);
+        const getFeesConfig = async function getCommissionFeesConfigurationFromAPI() {
 
-        return {  ////// FOR DEVELOPING PURPOSES ONLY
-            cashIn: {
-                "percents": 0.03,
-                "max": {
-                    "amount": 5,
-                    "currency": "EUR"
-                }
-            },
-            cashOutNatural: {
-                "percents": 0.3,
-                "week_limit": {
-                    "amount": 1000,
-                    "currency": "EUR"
-                }
-            },
-            cashOutJuridical: {
-                "percents": 0.3,
-                "min": {
-                    "amount": 0.5,
-                    "currency": "EUR"
-                }
-            }
+            // In case invoked by updateFeesConfig method first deep clean up of existing properties of feesConfig object
+            Object.keys(feesConfig).forEach((key) => {
+                delete feesConfig[key]
+            });
+
+            // Populate feeConfigs object with commission fees configs received from API with same names as found in configUrls parameter
+            // for (const [key, value] of Object.entries(configUrls)) {
+            //     console.log(`${key}: ${value}`);    ////// FOR DEVELOPING PURPOSES ONLY
+            //     feesConfig[key] = await fetchFeesConfig(value);
+            // }
+            // This version allowed if no await used inside forEach function
+            // Object.entries(configUrls).forEach(([key, value]) => {
+            //     console.log(`${key}: ${value}`);    ////// FOR DEVELOPING PURPOSES ONLY
+            //     feesConfig[key] = fetchFeesConfig(value);
+            // });
+
+            console.log(feesConfig);    ////// FOR DEVELOPING PURPOSES ONLY
+            //
+            // Do not return anything here as method will directly change feesConfig variable
+            //
+        }
+
+        // Updates a single instance object of commission fees configuration just in case those changes
+        const updateFeesConfig = function updateCommissionFeesConfigurationFromAPI() {
+            // Invoke again getFeesConfig method to update feesConfig variable
+            getFeesConfig();
+        }
+
+        // Make a closure to separate public and private module members
+        return {
+            updateFeesConfig: updateFeesConfig,
+            getFeesConfig: feesConfig,
         }
     }
 
-    const getFeesConfig = function getCommissionFeesConfigurationFromAPI() {
-        // not sure if having this get method makes sense then all the hard work is done by make
-        return makeFeesConfigObject(commissionFeesConfigURLs);
-    }
-
-    const updateFeesConfig = function updateCommissionFeesConfigurationFromAPI() {
-        return getFeesConfig();
-        // we should need a return.... if use singelton pattern
-    }
-
+    let instance;
     return {
-        // getFeesConfig: getFeesConfig(commissionFeesConfigURLs),
-        getFeesConfig: getFeesConfig,
-        updateFeesConfig: updateFeesConfig,
-
-    }
-
-})()
+        // Singleton's Gatekeeper - returns the one and only instance of the commissionFees object
+        getInstance: () => {
+            if (!instance) {    // check if instance is available
+                instance = new commissionFees();
+                delete instance.constructor; // or set it to null
+            }
+            return instance;
+        }
+    };
+})();
