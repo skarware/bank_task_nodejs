@@ -10,6 +10,10 @@ const transactionsLog = [];
 
 export default class Bank {
 
+    // static getTransactionsLog() {     ////// FOR DEVELOPING PURPOSES ONLY
+    //     return transactionsLog;    ////// FOR DEVELOPING PURPOSES ONLY
+    // }    ////// FOR DEVELOPING PURPOSES ONLY
+
     // In case commission fees configuration on API changes and must be update during operations
     static updateCommissionFeesConfig() {
         commissionFeesManager.updateFeesConfig();
@@ -20,7 +24,8 @@ export default class Bank {
     }
 
     processTransaction(transaction) {
-        console.info('processTransaction(transaction): ', transaction); ////// FOR DEVELOPING PURPOSES ONLY
+
+        // console.info('processTransaction(transaction): ', transaction); ////// FOR DEVELOPING PURPOSES ONLY
 
         // get commission fee for given transaction
         const commissionFee = this.getCommissionFee(transaction);
@@ -38,15 +43,17 @@ export default class Bank {
     }
 
     getCommissionFee(transaction) {
-
-        // First before anything else get the operation type for given transaction. Available operation types:['cashIn','cashOutNatural','cashOutJuridical']
+        /** First before anything else get the operation type for given transaction.
+         * Available operation types at current time but might change:
+         * ['cashIn', 'cashOutNatural', 'cashOutJuridical']
+         */
         const operationType = this.getOperationType(transaction);
 
         // Get the right commission fee config
         const feeConfig = commissionFeesConfig[operationType];
 
-        console.log("operationType: ", operationType);    ////// FOR DEVELOPING PURPOSES ONLY
-        console.log("feeConfig: ", feeConfig);    ////// FOR DEVELOPING PURPOSES ONLY
+        // console.log("operationType: ", operationType);    ////// FOR DEVELOPING PURPOSES ONLY
+        // console.log("feeConfig: ", feeConfig);    ////// FOR DEVELOPING PURPOSES ONLY
 
         // transaction amount is used quite often in this method so useful to assign its value to a well-named const
         const transactionAmount = transaction.operation.amount;
@@ -55,61 +62,99 @@ export default class Bank {
 
         // if operation type cashOutNatural
         if (operationType === 'cashOutNatural') {
-            // if user exceeded weekly limit amount calc the appropriate commission fee
-            const exceededAmount = this.currentWeekWithdrawnAmount(transaction) - feeConfig.weekLimit.amount;
+            // get user's exceeded weekly withdrawn limit amount since last Monday
+            const exceededAmount = this.getCurrentWeekWithdrawnAmount(transaction) - feeConfig.weekLimit.amount;
+
+            // if user exceeded weekly limit calc the appropriate commission fee
             if (exceededAmount > 0) {
                 // commission is calculated only from exceeded amount
                 if (exceededAmount < transactionAmount) {
-                    // for 1000.00 EUR (weekLimit.amount) there is still no commission fee
-                    taxableAmount = transactionAmount - exceededAmount;
+                    // ! for 1000.00 EUR (weekLimit.amount) there is still no commission fee only to the part over it
+                    taxableAmount = exceededAmount;
                 } else {
                     // if (exceededAmount >= transactionAmount) then tax a whole transactionAmount
                     taxableAmount = transactionAmount;
                 }
-
-                // when taxable amount is known calc the commission fee
-                commissionFee = this.calcCommissionFee(taxableAmount, feeConfig);
             } else {
-                // or return 0 commission fee if weekly cash out limit is not exceeded and transaction is free of charge
-                return 0;
+                // ese if weekly cash out limit is not exceeded then transaction is free of charge
+                taxableAmount = 0;
             }
-            // if operation type is NOT cashOutNatural then
+
+            // when the taxable amount is known calc the commission fee
+            commissionFee = this.calcCommissionFee(taxableAmount, feeConfig);
+
+            // else operation type is NOT cashOutNatural then
         } else {
             // calc preliminary commission fee per transaction
             commissionFee = this.calcCommissionFee(transactionAmount, feeConfig);
 
             // check if commissionFee is not over the cap or below minimum fee per operation
-            if (
-                operationType === 'cashOutJuridical'
-                && (commissionFee < feeConfig.min.amount)
-            ) {
+            if (operationType === 'cashOutJuridical' && commissionFee < feeConfig.min.amount) {
                 // Cash out for legal persons commission fee has its minimum fee per operation
-                commissionFee = feeConfig.min.amount;
-            } else if (
-                operationType === 'cashIn'
-                && (commissionFee > feeConfig.max.amount)
-            ) {
+                commissionFee = this.ceilFixedPoint(feeConfig.min.amount);
+            } else if (operationType === 'cashIn' && commissionFee > feeConfig.max.amount) {
                 // Cash in commission fee has its cap
-                commissionFee = feeConfig.max.amount;
+                commissionFee = this.ceilFixedPoint(feeConfig.max.amount);
             }
         }
 
-        console.log("commissionFee: ", commissionFee);    ////// FOR DEVELOPING PURPOSES ONLY
-
-        // Then all is done return commission fee
+        // When all is done return commission fee
         return commissionFee;
     }
 
-    currentWeekWithdrawnAmount({userId, date, operation}) {
+    getLastMondayDate(date) {
+        // getDay() - Gets the day of week, from 0 (Sunday) to 6 (Saturday).
+        let dayOfWeek = date.getDay();
 
-        return 0;
+        // if weekday 0 (Sunday) set dayOfWeek to 7 to make week starting from 1 (Monday) to 7 (Sunday) therefor calc simpler
+        if (dayOfWeek === 0) dayOfWeek = 7;
+
+        const msPerDay = 86400 * 1000;
+        const msSinceLastMonday = msPerDay * dayOfWeek - msPerDay;
+
+        // calc the last Monday date in ms and return
+        return date.getTime() - msSinceLastMonday;
+    }
+
+    getCurrentWeekWithdrawnAmount({userId, date, operation}) {
+        // set the current operation's amount as first component of sum of withdrawn amount since last Monday
+        let withdrawnSum = operation.amount;
+
+        // get last Monday's date in ms
+        const lastMondayDate = this.getLastMondayDate(date);
+
+        // Filter all cashOut transactions by given userId in transactionsLog and if not later then lastMondayDate sum it to withdrawnSum
+        transactionsLog
+            .filter((logEntry) => (
+                logEntry.userId === userId
+                && logEntry.type === 'cashOut'
+                && logEntry.date.getTime() >= lastMondayDate
+            ))
+            .forEach((logEntry) => {
+                withdrawnSum += logEntry.operation.amount;
+            });
+
+        // NOTE: chaining filter and forEach is not the fastest approach but easy readable
+
+        return withdrawnSum;
     }
 
     calcCommissionFee(taxableAmount, feeConfig) {
+        // simply get percents provided in feeConfig multiply by the taxable amount and divide by 100
+        let commissionFee = feeConfig.percents * taxableAmount / 100;
 
+        // rounded to the smallest currency item (for example, for EUR currency - cents) to upper bound.
+        commissionFee = this.ceilFixedPoint(commissionFee);
 
-        // simply get percents from feeConfig and multiply by the taxable amount and divide by 100
-        return feeConfig.percents * taxableAmount / 100;
+        return commissionFee;
+    }
+
+    ceilFixedPoint(commissionFee) {
+        // ceil commission fee
+        commissionFee = Math.ceil(commissionFee * 100) / 100;
+
+        // ensure that commission fee has 2 digits after the decimal point
+        return commissionFee.toFixed(2);
     }
 
     getOperationType({type, userType}) {
