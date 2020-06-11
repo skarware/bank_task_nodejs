@@ -9,4 +9,8 @@ export default class Utils {
         return value;
     }
 
+    static capitalize = function capitalizeFirstLetter(str) {
+        return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
 }
