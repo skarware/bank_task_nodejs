@@ -9,12 +9,18 @@ import fs from 'fs';
  */
 function transactionsFileReader(filePath) {
     let data;
-    try {
-        // take and read file passed as argument to the function
-        data = fs.readFileSync(filePath, 'utf-8');
-    } catch (error) {
-        console.error('FILE READ ERROR: ', error)
-        throw error;
+
+    if (filePath) {
+        try {
+            // take and read file passed as argument to the function
+            data = fs.readFileSync(filePath, 'utf-8');
+        } catch (error) {
+            console.error('FILE READ ERROR:')
+            throw error;
+        }
+    } else {
+        console.error('Please provide JSON data input file as third argument.');
+        process.exit();
     }
 
     // remove all trailing commas from JSON input
