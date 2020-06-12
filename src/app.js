@@ -1,25 +1,55 @@
 import Bank from './Bank.js';
 import Utils from './Utils.js';
+import fs from 'fs';
 
-const operationsArr = [ ////// FOR DEVELOPING PURPOSES ONLY
-    { "date": "2016-01-05", "user_id": 1, "user_type": "natural", "type": "cash_in", "operation": { "amount": 200.00, "currency": "EUR" } },
-    { "date": "2016-01-06", "user_id": 2, "user_type": "juridical", "type": "cash_out", "operation": { "amount": 300.00, "currency": "EUR" } },
-    { "date": "2016-01-06", "user_id": 1, "user_type": "natural", "type": "cash_out", "operation": { "amount": 30000, "currency": "EUR" } },
-    { "date": "2016-01-07", "user_id": 1, "user_type": "natural", "type": "cash_out", "operation": { "amount": 1000.00, "currency": "EUR" } },
-    { "date": "2016-01-07", "user_id": 1, "user_type": "natural", "type": "cash_out", "operation": { "amount": 100.00, "currency": "EUR" } },
-    { "date": "2016-01-10", "user_id": 1, "user_type": "natural", "type": "cash_out", "operation": { "amount": 100.00, "currency": "EUR" } },
-    { "date": "2016-01-10", "user_id": 2, "user_type": "juridical", "type": "cash_in", "operation": { "amount": 1000000.00, "currency": "EUR" } },
-    { "date": "2016-01-10", "user_id": 3, "user_type": "natural", "type": "cash_out", "operation": { "amount": 1000.00, "currency": "EUR" } },
-    { "date": "2016-02-15", "user_id": 1, "user_type": "natural", "type": "cash_out", "operation": { "amount": 300.00, "currency": "EUR" } },
-] ////// FOR DEVELOPING PURPOSES ONLY
+/**
+ * Reads JSON file, removes any trailing commas, converts snake_case to camelCase;
+ * parses it while transforms date string to Date object and returns as transaction objects array.
+ * NOTE: function won't fit in Utils as function is quite specific for the app.
+ */
+function transactionsFileReader(filePath) {
+    let data;
+    try {
+        // take and read file passed as argument to the function
+        data = fs.readFileSync(filePath, 'utf-8');
+    } catch (error) {
+        console.error('FILE READ ERROR: ', error)
+        throw error;
+    }
 
-let bankVilniusBranch = new Bank('Vilniaus filialas');
+    // remove all trailing commas from JSON input
+    data = Utils.removeTrailingComma(data);
 
-for (let i = 0; operationsArr.length > i ; i++) { ////// FOR DEVELOPING PURPOSES ONLY
-    bankVilniusBranch.processTransaction(JSON.parse(Utils.camelCase(JSON.stringify(operationsArr[i])), Utils.toDateObj)); ////// FOR DEVELOPING PURPOSES ONLY
-} ////// FOR DEVELOPING PURPOSES ONLY
+    // converts snake case to Camel Case
+    data = Utils.camelCase(data);
 
-// bank.transactionsLog.forEach(v => console.log('transactionLog: ', {v})); ////// FOR DEVELOPING PURPOSES ONLY
+    // parse JSON string into an array of transaction objects and return it
+    return JSON.parse(data, Utils.toDateObj);
+}
 
+/**
+ * main initialization function is the entry point into the application.
+ * To keep it simple function reads just one input file from args parameter at index 2;
+ * input file should be valid JSON file thought app will try to fix any trailing commas;
+ * if input data contains transactions the app will process and print commission fees to STDOUT.
+ */
+const main = function mainInitializationFunction(args) {
+    // get input JSON file path from command line arguments
+    const filePath = args[2];
 
+    // create Vilnius' bank branch
+    let bankVilniusBranch = new Bank('Vilniaus filialas');
+
+    // get transactions from JSON file
+    let transactionsArr = transactionsFileReader(filePath);
+
+    // Process all transactions in array and print commission fees into STDOUT
+    transactionsArr.forEach(el => bankVilniusBranch.processTransaction(el));
+}
+
+/**
+ * To start the application invoke the main function and pass as an argument 'process.argv' (command line arguments) to read data
+ * input JSON file as third command line argument to the app (node app.js input.json) and process the data as transactions if any.
+ */
+main(process.argv);
 
