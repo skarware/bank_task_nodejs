@@ -3,16 +3,12 @@ import Utils from './Utils.js';
 
 // On first Bank class load get commission Fees Configuration from API
 const commissionFeesManager = commissionFees.getInstance();
-const commissionFeesConfig = commissionFeesManager.getFeesConfig;
+let commissionFeesConfig = commissionFeesManager.getFeesConfig;
 
 // Same log for all branches of the bank
 const transactionsLog = [];
 
 export default class Bank {
-
-    // static getTransactionsLog() {     ////// FOR DEVELOPING PURPOSES ONLY
-    //     return transactionsLog;    ////// FOR DEVELOPING PURPOSES ONLY
-    // }    ////// FOR DEVELOPING PURPOSES ONLY
 
     // In case commission fees configuration on API changes and must be update during operations
     static updateCommissionFeesConfig() {
@@ -24,26 +20,38 @@ export default class Bank {
     }
 
     processTransaction(transaction) {
+        /**
+         * To get commission fee for a transaction getCommissionFee(transaction) method must be invoked,
+         * but first it needs to get data from network services (commissions fees configuration from API).
+         * So we could create function getCommissionFeesConfig(callbackGetCommissionFee, self) {...}
+         * and on invocation pass getCommissionFeesConfig(this.getCommissionFee.bind(this), this) as call back;
+         * Basically: getData(callback);
+         * Or we can wrap this.getCommissionFee(transaction) invocation into an anonymous async function (IIFE)
+         * this helps to avoid losing 'this' context when passing object methods as callbacks.
+         */
+        (async () => {
+            // wait for network data returned then reassign resolved Promise value
+            commissionFeesConfig = await commissionFeesConfig;
 
-        // console.info('processTransaction(transaction): ', transaction); ////// FOR DEVELOPING PURPOSES ONLY
+            // get commission fee for given transaction after we received commissionFeesConfig
+            const commissionFee = this.getCommissionFee(transaction);
 
-        // get commission fee for given transaction
-        const commissionFee = this.getCommissionFee(transaction);
+            // print commission fee to stdout
+            console.log(commissionFee);
 
-        // print commission fee to stdout
-        console.log(commissionFee)
-
-        // after we done processing transaction add it to the log for the future reference
-        this.logTransaction(transaction);
+            // after we done processing transaction add it to the log for the future reference
+            this.logTransaction(transaction);
+        })();
     }
 
     logTransaction(transaction) {
-        // save transaction to the Bank's log
+        // save transaction to the Bank's class log
         transactionsLog.push(transaction);
     }
 
     getCommissionFee(transaction) {
-        /** First before anything else get the operation type for given transaction.
+        /**
+         * First before anything else get the operation type for given transaction.
          * Available operation types at current time but might change:
          * ['cashIn', 'cashOutNatural', 'cashOutJuridical']
          */
@@ -51,9 +59,6 @@ export default class Bank {
 
         // Get the right commission fee config
         const feeConfig = commissionFeesConfig[operationType];
-
-        // console.log("operationType: ", operationType);    ////// FOR DEVELOPING PURPOSES ONLY
-        // console.log("feeConfig: ", feeConfig);    ////// FOR DEVELOPING PURPOSES ONLY
 
         // transaction amount is used quite often in this method so useful to assign its value to a well-named const
         const transactionAmount = transaction.operation.amount;
@@ -98,7 +103,7 @@ export default class Bank {
             }
         }
 
-        // When all is done return commission fee
+        // // When all is done return commission fee
         return commissionFee;
     }
 
