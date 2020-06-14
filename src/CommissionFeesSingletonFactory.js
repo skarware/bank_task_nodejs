@@ -1,12 +1,12 @@
 import Utils from './Utils.js';
 import fetch from 'node-fetch';
 
-export default (function commissionFeesSingletonFactory() {
+export default (function CommissionFeesSingletonFactory() {
     /**
      * Export commissions fees module as singleton, not that the current app version need it but
      * more like to show off or try singleton implementation using lazy initialization pattern in JS
      */
-    function commissionFees() {
+    function CommissionFeesSingletonClass() {
 
         // Object with links to currently known commission fees configuration
         const configUrls = {
@@ -67,11 +67,11 @@ export default (function commissionFeesSingletonFactory() {
 
     let instance;
     return {
-        // Singleton's Gatekeeper - returns the one and only instance of the commissionFees object
+        // Singleton's Gatekeeper - returns the one and only instance of the CommissionFeesSingletonClass object
         getInstance: () => {
             // check if instance is available if not then and only then create it
             if (!instance) {
-                instance = new commissionFees();
+                instance = new CommissionFeesSingletonClass();
                 /**
                  * null the constructor so the returned object can't be new'd.
                  * NOTE: that delete instance.constructor; won't do the job!

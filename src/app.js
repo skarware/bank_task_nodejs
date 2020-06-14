@@ -43,14 +43,15 @@ const main = function mainInitializationFunction(args) {
     // get input JSON file path from command line arguments
     const filePath = args[2];
 
-    // create Vilnius' bank branch
-    let bankVilniusBranch = new Bank('Vilniaus filialas');
-
     // get transactions from JSON file
     let transactionsArr = transactionsFileReader(filePath);
 
+    // create Vilnius' bank branch
+    let bankVilniusBranch = new Bank('Vilniaus filialas');
+
     // Process all transactions in array and print commission fees into STDOUT
     transactionsArr.forEach(el => bankVilniusBranch.processTransaction(el));
+
 }
 
 /**

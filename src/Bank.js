@@ -1,18 +1,27 @@
-import commissionFees from './commissionFees.js';
+import CommissionFeesSingletonFactory from './CommissionFeesSingletonFactory.js';
 import Utils from './Utils.js';
 
-// On first Bank class load get commission Fees Configuration from API
-const commissionFeesManager = commissionFees.getInstance();
-let commissionFeesConfig = commissionFeesManager.getFeesConfig;
+/**
+ * To make proper Bank class encapsulation place private methods and fields outside the class definition.
+ */
 
-// Same log for all branches of the bank
+// On first Bank class load get commission Fees Configuration from API
+const commissionFeesManager = CommissionFeesSingletonFactory.getInstance();
+let commissionFeesConfig = commissionFeesManager.getFeesConfig();
+
+// Same transaction log for all branches of the bank
 const transactionsLog = [];
+
+const logTransaction = function saveTransactionIntoBankClassLog(transaction) {
+    // save transaction to the Bank's class log
+    transactionsLog.push(transaction);
+}
 
 export default class Bank {
 
     // In case commission fees configuration on API changes and must be update during operations
     static updateCommissionFeesConfig() {
-        commissionFeesManager.updateFeesConfig();
+        commissionFeesConfig = commissionFeesManager.updateFeesConfig();
     }
 
     constructor(branchName) {
@@ -25,12 +34,12 @@ export default class Bank {
          * but first it needs to get data from network services (commissions fees configuration from API).
          * So we could create function getCommissionFeesConfig(callbackGetCommissionFee, self) {...}
          * and on invocation pass getCommissionFeesConfig(this.getCommissionFee.bind(this), this) as call back;
-         * Basically: getData(callback);
+         * Basically: getData(callbackGetCommissionFee);
          * Or we can wrap this.getCommissionFee(transaction) invocation into an anonymous async function (IIFE)
          * this helps to avoid losing 'this' context when passing object methods as callbacks.
          */
         (async () => {
-            // wait for network data returned then reassign resolved Promise value
+            // wait for network data returned then reassign settled Promise value (hopefully resolved one and not rejected)
             commissionFeesConfig = await commissionFeesConfig;
 
             // get commission fee for given transaction after we received commissionFeesConfig
@@ -40,13 +49,8 @@ export default class Bank {
             console.log(commissionFee);
 
             // after we done processing transaction add it to the log for the future reference
-            this.logTransaction(transaction);
+            logTransaction(transaction);
         })();
-    }
-
-    logTransaction(transaction) {
-        // save transaction to the Bank's class log
-        transactionsLog.push(transaction);
     }
 
     getCommissionFee(transaction) {
@@ -103,7 +107,7 @@ export default class Bank {
             }
         }
 
-        // // When all is done return commission fee
+        // When all is done return commission fee
         return commissionFee;
     }
 
